@@ -20,7 +20,13 @@ public :
 	 *  \brief Excute a shell command to scan BLE devices
 	 *
  	 */	
-	static std::string exec_scan_ble();
+	static std::string exec_scan();
+
+	/*!
+	 *  \brief Excute a shell command to connect devices
+	 *
+ 	 */	
+	static std::string exec_get_ble_notification(std::string _addr, int _timeout_ms);
 
 };
 

@@ -21,16 +21,14 @@ private :
 	
 	Parser parser;
 
-
 public :
 
 	/*!
 	 *  \brief BLE_manager constructor 
 	 *
  	 */	
-	BLE_manager();
-	~BLE_manager();
-
+	BLE_manager()
+	{}
 
 	/*!
 	 *  \brief initialization of the bluetooth BLE 
@@ -38,8 +36,28 @@ public :
  	 */
 	void initialization(void);
 
-	void getModuleAddr(std::string& _addr_rear_module,std::string& _addr_command_module);
+	/*!
+	 *  \brief collect rear module and command address adress
+	 *	
+	 * \param _addr_rear_module : string which store rear module address
+	 * \param _addr_rear_module : string which store command module address
+ 	 */
+	void get_module_addr(std::string& _addr_rear_module,std::string& _addr_command_module);
 
+	/*!
+	 *  \brief collect message from  a device 
+	 *
+	 *	\param addr : address of the device
+ 	 */
+	std::string get_message_from_device(const std::string& _addr);
+
+	/*!
+	 *  \brief send a message to a device 
+	 *
+	 *	\param addr : address of the device
+	 *	\param message : message tosend
+ 	 */
+	void send_message_to_device(const std::string& _addr, std::string _message);
 };
 
 

@@ -1,7 +1,5 @@
-
-
-
 #include "ble_manager.h"
+
 
 int main(int argc, char const *argv[])
 {
@@ -9,9 +7,12 @@ int main(int argc, char const *argv[])
 	std::string addr_rear;
 	std::string addr_command;
 
+	std::string result("");
+	
 	try {
 		ble.initialization();
-		ble.getModuleAddr(addr_rear, addr_command);
+		ble.get_module_addr(addr_rear, addr_command);
+		
 	} catch(myException& e) {
 		std::cout << "ERROR " << e.getId() << " : " << e.what() << std::endl;
 		
@@ -20,8 +21,18 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	std::cout << "REAR : " << addr_rear << std::endl;
-	std::cout << "COMMAND : " << addr_command << std::endl;
+	try {
+		result = ble.get_message_from_device(addr_command);
+	} catch(myException& e) {
+		std::cout << "ERROR " << e.getId() << " : " << e.what() << std::endl;
+		
+		if(e.getLevel() == 0){
+			return e.getId();	
+		}
+	}
+	
+	std::cout << "message : " << result << std::endl;
 
 	return 0;
 }
+
