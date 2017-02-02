@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <thread>
 #include <mutex>
+#include <regex>
+#include <vector>
 #include "myUart.h"
 
 #define SIZE_HEADER_NMEA			6
@@ -35,8 +37,11 @@ typedef struct {
 typedef struct {
 	GeographicCoordinate latitude;
 	GeographicCoordinate longitude;
+	float seaLevel;
 	float altitude;
 	float speed;
+	int hour;
+	int minut;
 } GPSInfo;
 
 class GPS 
@@ -51,6 +56,7 @@ private :
 
 	void task(void);
 	void parseFrameBuffer (std::string& gpsInfo);
+	void strToVector(std::string str, std::vector<std::string>& result);
 
 public :
 
@@ -61,7 +67,7 @@ public :
 	void sendCommand(std::string cmd);
 	void start(void);
 	void stop(void);
-	void getGPSInfo(void);
+	int getGPSInfo(GPSInfo& gpsInfo);
 };
 
 

@@ -123,3 +123,112 @@ void GPS::parseFrameBuffer (std::string& gpsInfo){
 		foundEnd = gpsInfo.find(delCRLF);
 	}
 }
+
+int GPS::getGPSInfo(GPSInfo& gpsInfo){
+	std::string GGAFrame = gpsFrames.GPGGA;
+	std::string VTGFrame = gpsFrames.GPVTG;
+	std::regex regex;
+	std::vector<std::string> result;
+
+
+	// Get parameter of VTGFrame
+	strToVector(VTGFrame, result);
+
+	if(	result[0].compare("$GPVTG") 
+		|| result[8].compare("K")) {
+		return -1;
+	}
+
+	// Get speed
+	regex = "[0-9]+.[0-9]+";
+	if(std::regex_match(result[7].c_str(), regex)) {
+		gpsInfo.speed = atof(result[7].c_str());
+	} else {
+		return -2;
+	}
+
+	// Get parameter of GGAFrame
+	strToVector(GGAFrame, result);
+
+
+	if( result[0].compare("$GPGGA")
+		|| result[10].compare("M")
+		|| result[12].compare("M")){
+		return -1;
+	}
+
+	// Get time
+	regex = "[0-9]{6}.[0-9]{3}";
+	if(std::regex_match(result[1].c_str(), regex)) {
+		gpsInfo.hour = atoi(result[1].substr(0,2).c_str());
+		gpsInfo.minut = atoi(result[1].substr(2,2).c_str());
+	} else {
+		return -2;
+	}
+
+	// Get latitude value
+	regex = "[0-9]+.[0-9]+";
+	if(std::regex_match(result[2].c_str(), regex)) {
+		gpsInfo.latitude.value = result[2].c_str();
+	} else {
+		return -2;
+	}
+
+	
+	// Get latitude cardinal direction
+	regex = "N|S";
+	if(std::regex_match(result[3].c_str(), regex)) {
+		const char* tmp = result[3].substr(0,1).c_str();
+		gpsInfo.latitude.cardinalPoint = tmp[0];
+	} else {
+		return -2;
+	}
+
+	// Get longitude value
+	regex = "[0-9]+.[0-9]+";
+	if(std::regex_match(result[4].c_str(), regex)) {
+		gpsInfo.longitude.value = result[4];
+	} else {
+		return -2;
+	}
+
+	// Get longitude cardinal point
+	regex = "E|W";
+	if(std::regex_match(result[5].c_str(), regex)) {
+		const char* tmp = result[5].substr(0,1).c_str();
+		gpsInfo.longitude.cardinalPoint = tmp[0];
+	} else {
+		return -2;
+	}
+
+	// Get Altitude
+	regex = "[0-9]+.[0-9]+";
+	if(std::regex_match(result[9].c_str(), regex)) {
+		gpsInfo.altitude = atof(result[9].c_str());
+	} else {
+		return -2;
+	}
+
+	// Get Sea level
+	regex = "[0-9]+.[0-9]+";
+	if(std::regex_match(result[11].c_str(), regex)) {
+		gpsInfo.seaLevel = atof(result[11].c_str());
+	} else {
+		return -2;
+	}
+
+	return 0;
+}
+
+void GPS::strToVector(std::string str, std::vector<std::string>& result) {
+
+	std::stringstream strStream(str);
+	std::string parsed;
+	int i = 0;
+	result.clear();
+
+	while(getline(strStream,parsed,','))
+	{
+	     result.push_back(parsed);
+	}
+}
