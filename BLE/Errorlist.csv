@@ -1,0 +1,9 @@
+#;Description;level
+1;initialization() : No dongle BLE detected;0
+2;getModuleAddr() : Modules not detected;0
+3;getModuleAddr() : Rear module not detected;1
+4;getModuleAddr() : Command module not detected;1
+5;parse_notification() : wrong notification format;1
+6;parse_notification() : wrong value format;1
+7;get_message_from_device() : module " + _addr + " isn't running ";1
+8;get_message_from_device() : parsing error ;1
