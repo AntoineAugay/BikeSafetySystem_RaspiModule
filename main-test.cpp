@@ -1,5 +1,38 @@
+#include <iostream>
 #include "ble_manager.h"
+#include "GPS.h"
 
+
+#define BLE
+
+#ifdef BLE
+
+int main(void){
+
+	GPS gps("/dev/ttyAMA0");
+	
+	gps.init();
+
+	gps.start();
+
+	sleep(10);
+
+/*
+	std::string str = "$G\nPGSV,1,1\n,00*79\n$GPRMC,0\n00336.80\n0,V,,,,,\n0.00,0.0\n0,060180\n,,,N*4C";
+
+	std::replace(str.begin(), str.end(), "\n", "");
+
+	std::cout << "str : " << str << std::endl;
+	gps.process(str);
+	std::cout << "str : " << str << std::endl;
+*/
+	gps.stop();
+	std::cout << "End of program" << std::endl;
+	return 0;
+}
+#endif
+
+#ifdef BLE
 
 int main(int argc, char const *argv[])
 {
@@ -13,12 +46,9 @@ int main(int argc, char const *argv[])
 		ble.initialization();
 		ble.get_module_addr(addr_rear, addr_command);
 		
-	} catch(myException& e) {
-		std::cout << "ERROR " << e.getId() << " : " << e.what() << std::endl;
-		
-		if(e.getLevel() == 0){
-			return e.getId();	
-		}
+	} catch(const exception& e) {
+		std::cout << "ERROR : " << e.what() << std::endl;
+		return -1;
 	}
 
 	try {
@@ -35,4 +65,6 @@ int main(int argc, char const *argv[])
 
 	return 0;
 }
+
+#endif
 
