@@ -9,8 +9,6 @@ GPS::GPS(const std::string _uart) {
 GPS::~GPS(){
 	stop();
 	uart->closeUART();
-	std::cout << "End Tread" << std::endl;
-	delete(collectThread);
 }
 
 int GPS::init(void){
@@ -30,16 +28,19 @@ int GPS::init(void){
 	}
 
 	sendCommand(PMTK_SET_FRAME_VTG_GGA);
+	usleep(100000);
 	return 0;
 }
 
 void GPS::start(void) {
+	
 	collectThread = new std::thread(&GPS::task, this);
 }
 
 void GPS::stop(void){
 	threadRunning = false;
 	collectThread->join();
+	delete(collectThread);
 }
 
 void GPS::sendCommand(const std::string cmd) {
@@ -64,7 +65,6 @@ void GPS::task(void) {
 
 		len = uart->readUART(buffer);
 		if(len > 0) {
-			std::cout  << "<" << buffer << ">" << std::endl;
 			sleeptime = 990000;
 		} else {
 			sleeptime = 200000;
@@ -104,7 +104,7 @@ void GPS::parseFrameBuffer (std::string& gpsInfo) {
 		
 		std::string frame = gpsInfo.substr(0, foundEnd);
 		
-		std::cout << "Extrated frame : " << frame ;
+		//std::cout << "Extrated frame : " << frame << std::endl;
 
 		std::string header = gpsInfo.substr(0, SIZE_HEADER_NMEA);
 
@@ -114,7 +114,7 @@ void GPS::parseFrameBuffer (std::string& gpsInfo) {
 		} else if (header == KEY_START_GPVTG_FRAME){
 			gpsFrames.GPVTG = frame;
 		} else {
-			std::cout << " -> Invalid frame" << std::endl;
+			//std::cout << " -> Invalid frame" << std::endl;
 		}
 		gpsFrameLock.unlock();
 
@@ -124,17 +124,31 @@ void GPS::parseFrameBuffer (std::string& gpsInfo) {
 }
 
 int GPS::getGPSInfo(GPSInfo& gpsInfo) {
+	gpsFrameLock.lock();
 	std::string GGAFrame = gpsFrames.GPGGA;
 	std::string VTGFrame = gpsFrames.GPVTG;
+	gpsFrameLock.unlock();
+
+	if(GGAFrame == "" || VTGFrame == ""){
+		return -1;
+	}
 	std::regex regex;
 	std::vector<std::string> result;
 
+	gpsInfo.isValid = true;
+
+	std::cout << "GPGGA : " << GGAFrame << std::endl; 
+	std::cout << "GPVTG : " << VTGFrame << std::endl;
 
 	// Get parameter of VTGFrame
 	strToVector(VTGFrame, result);
 
+	std::cout << "resultVTG size : " << result.size() << std::endl;
+
+
 	if(	result[0].compare("$GPVTG") 
 		|| result[8].compare("K")) {
+		gpsInfo.isValid = false;
 		return -1;
 	}
 
@@ -143,25 +157,29 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	if(std::regex_match(result[7].c_str(), regex)) {
 		gpsInfo.speed = atof(result[7].c_str());
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
 	// Get parameter of GGAFrame
 	strToVector(GGAFrame, result);
 
+	std::cout << "resultGGA size : " << result.size() << std::endl;
 
 	if( result[0].compare("$GPGGA")
 		|| result[10].compare("M")
 		|| result[12].compare("M")){
+		gpsInfo.isValid = false;
 		return -1;
 	}
 
 	// Get time
 	regex = "[0-9]{6}.[0-9]{3}";
 	if(std::regex_match(result[1].c_str(), regex)) {
-		gpsInfo.hour = atoi(result[1].substr(0,2).c_str());
-		gpsInfo.minut = atoi(result[1].substr(2,2).c_str());
+		gpsInfo.hour = result[1].substr(0,2);
+		gpsInfo.minut = result[1].substr(2,2);
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -170,6 +188,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	if(std::regex_match(result[2].c_str(), regex)) {
 		gpsInfo.latitude.value = result[2].c_str();
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -180,6 +199,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 		const char* tmp = result[3].substr(0,1).c_str();
 		gpsInfo.latitude.cardinalPoint = tmp[0];
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -188,6 +208,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	if(std::regex_match(result[4].c_str(), regex)) {
 		gpsInfo.longitude.value = result[4];
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -197,6 +218,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 		const char* tmp = result[5].substr(0,1).c_str();
 		gpsInfo.longitude.cardinalPoint = tmp[0];
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -205,6 +227,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	if(std::regex_match(result[9].c_str(), regex)) {
 		gpsInfo.altitude = atof(result[9].c_str());
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
@@ -213,6 +236,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	if(std::regex_match(result[11].c_str(), regex)) {
 		gpsInfo.seaLevel = atof(result[11].c_str());
 	} else {
+		gpsInfo.isValid = false;
 		return -2;
 	}
 
