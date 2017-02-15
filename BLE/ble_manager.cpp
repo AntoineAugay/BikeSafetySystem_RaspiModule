@@ -1,5 +1,12 @@
 #include "ble_manager.h"
 
+BLEManager::BLEManager(){
+	BLEThread = NULL;
+}
+
+BLEManager::~BLEManager(){
+	stop();
+}
 
 int BLEManager::start(void){
 	if(isInitDone){
@@ -13,8 +20,10 @@ int BLEManager::start(void){
 
 void BLEManager::stop(void){
 	threadRunning = false;
-	BLEThread->join();
-	std::cout << "thread stopped" << std::endl;
+	if(BLEThread != NULL){
+		BLEThread->join();
+		delete(BLEThread);
+	}
 }
 
 
@@ -27,18 +36,17 @@ void BLEManager::task(void){
 
 	while(threadRunning) {
 
+
 		// Scan to find REAR module and COMMAND module
 		if(rearModuleAddr == "" || commandModuleAddr == "") {
-
-			
 
 			gettimeofday(&tvCurrentTime, 0);
 			currentTime = (tvCurrentTime.tv_sec*1000) + (tvCurrentTime.tv_usec/1000);
 			
 			if( currentTime - lastScan > 5000 ){
 
-				std::cout << "REAR : " << rearModuleAddr << " / COMMAND : " << commandModuleAddr << std::endl;
 				getModuleAddr();
+				std::cout << "REAR : " << rearModuleAddr << " / COMMAND : " << commandModuleAddr << std::endl;
 				gettimeofday(&tvLastScan, 0);
 				lastScan = (tvLastScan.tv_sec*1000) + (tvLastScan.tv_usec/1000);
 			}
@@ -50,16 +58,18 @@ void BLEManager::task(void){
 			// Send message to rear module
 			message = MessagesToRear.pop();
 			if(message != "") {
+				std::cout << "Message sent : " << message << std::endl;
 				sendMessageToDevice(REAR, message);
 			}
 
 			// Here to send message to command module (not usefull now)
 			
+			
 			// Get message from command module
 			std::string frame = "";
 			getMessageFromDevice(COMMAND, frame);
-			
 			if(frame != ""){
+				std::cout << "Message received : " << frame << std::endl;
 				parseCommandFrame(frame);
 			}
 
@@ -76,14 +86,14 @@ int BLEManager::init(void){
 
 	if(parser.checkSubString("DOWN", result)) {
 		result = ShellExec::exec("hciconfig");
-		std::cout << "Dongle BLE DOWN..." << std::endl;
+		//std::cout << "Dongle BLE DOWN..." << std::endl;
 		ShellExec::exec("sudo hciconfig hci0 up");
 
 		result = ShellExec::exec("hciconfig");
 	}
 
 	if(parser.checkSubString("UP RUNNING", result)) {
-		std::cout << "Dongle BLE RUNNING" << std::endl;
+		//std::cout << "Dongle BLE RUNNING" << std::endl;
 		isInitDone = true;
 		return 0;
 	} else {
@@ -101,26 +111,42 @@ int BLEManager::getModuleAddr(){
 	/* Execute scan Shell command and collect result */
 	result = ShellExec::execScan();
 
+	rearModuleAddr = "";
+	commandModuleAddr = "";
+
 	/* Process each line of result to find module addresses */
 	while ((pos = result.find(delimiter)) != std::string::npos) {
 	    line = result.substr(0, pos);
 	    result.erase(0, pos + delimiter.length());
 
 	    if(parser.checkSubString("REAR", line)){
-	    	rearModuleAddr = line.substr(0, 17);
-	    	isRearModuleActive = true;
-	 	} else {
-	 		isRearModuleActive = false;
+	    	rearModuleAddr = line.substr(0, 17);	
 	 	}
 
 	 	if(parser.checkSubString("COMMAND", line)){
 			commandModuleAddr = line.substr(0, 17);
-			isCommandModuleActive = true;
+			
 	 	} else {
-	 		isCommandModuleActive = false;
 	 	}
 	}
 
+	bleInfoLock.lock();
+	if(rearModuleAddr != ""){
+    	isRearModuleActive = true;
+    	isRearModuleFind = true;
+	} else {
+ 		isRearModuleActive = false;
+ 		isRearModuleFind = false;
+	}
+
+	if(commandModuleAddr != ""){
+	    isCommandModuleActive = true;
+	    isCommandModuleFind = true;
+	} else {
+ 		isCommandModuleActive = false;
+ 		isCommandModuleFind = false;
+	}
+ 	bleInfoLock.unlock();
 	
 	if(rearModuleAddr == "" && commandModuleAddr == ""){
 		return -3; // No module detected
@@ -152,8 +178,10 @@ int BLEManager::getMessageFromDevice(const ModuleType module, std::string& frame
 
 	std::string cmd_result = ShellExec::execGetBleNotification(moduleAddr, 0);
 
-	frame = ""; 
 
+	frame = ""; 
+	bleInfoLock.lock();
+	
 	if(cmd_result == ""){
 		
 		switch(module) {
@@ -176,7 +204,7 @@ int BLEManager::getMessageFromDevice(const ModuleType module, std::string& frame
 				break;
 		}
 	}
-
+	bleInfoLock.unlock();
 
 	std::string delimiter = "\n";
 	std::string line;
@@ -226,6 +254,14 @@ int BLEManager::sendMessageToDevice(const ModuleType module, std::string message
 		default:
 			return -1;
 	}
+
+	if(message == ""){
+		return -1;
+	}
+
+	std::string cmd = "sudo gatttool -t random -b " + moduleAddr + " --char-write -a 0x000b -n " + message;
+	ShellExec::exec(cmd);
+
 }
 
 int BLEManager::parseCommandFrame(std::string frame){
@@ -238,17 +274,14 @@ int BLEManager::parseCommandFrame(std::string frame){
 		unsigned int header;   
 		std::stringstream ss;
 		ss << std::hex << frame.substr(0, 2);
-		// (char) strtoul(notification.substr(1, 2).c_str(), NULL, 16);
 		ss >> header;
 
 		switch(header){
 		case 0x01:
 			MessagesToRear.push(frame.substr(0, 2));
-			std::cout << frame.substr(0, 2) << " added to MessagesToRear" << std::endl;
 			break;
 		case 0x02:
 			MessagesToRear.push(frame.substr(0, 2));
-			std::cout << frame.substr(0, 2) << " added to MessagesToRear" << std::endl;
 			break;
 		}	
 		frame.erase(0,2);
@@ -256,4 +289,24 @@ int BLEManager::parseCommandFrame(std::string frame){
 	
 	return 0;
 
+}
+
+
+void BLEManager::getBLEInfo(BLEInfo& bleInfo){
+	bleInfoLock.lock();
+	if(rearModuleAddr != ""){
+		bleInfo.rearModuleFind = true;
+	} else {
+		bleInfo.rearModuleFind = false;
+	}
+
+	if(commandModuleAddr != ""){
+		bleInfo.commandModuleFind = true;
+	} else {
+		bleInfo.commandModuleFind = false;
+	}
+
+	bleInfo.rearModuleWork = isRearModuleActive;
+	bleInfo.commandModuleWork = isCommandModuleActive;
+	bleInfoLock.unlock();
 }

@@ -8,6 +8,7 @@
 #include <thread>
 #include <sys/time.h>
 #include <unistd.h>
+#include <mutex>
 
 #include "parser.h"
 #include "shell_exec.h"
@@ -24,12 +25,22 @@ enum ModuleType{
 	COMMAND
 };
 
+typedef struct {
+	bool rearModuleFind;
+	bool rearModuleWork;
+	bool commandModuleFind;
+	bool commandModuleWork;
+} BLEInfo;
+
 class BLEManager{
 private :
 	
 	Parser parser;
 	
 	bool isInitDone;
+
+	bool isCommandModuleFind;
+	bool isRearModuleFind;
 	bool isRearModuleActive;
 	bool isCommandModuleActive;
 
@@ -38,6 +49,7 @@ private :
 
 	std::thread* BLEThread;
 	bool threadRunning;
+	std::mutex bleInfoLock;
 
 	StringQueue MessagesToRear;
 	StringQueue MessagesToCommand;
@@ -48,39 +60,14 @@ private :
  	 */
 	void task(void);
 
-
-	
-
-public :
-
 	/*!
-	 *  \brief BLEManager constructor 
+	 *  \brief send a message to a device 
 	 *
- 	 */	
-	BLEManager()
-	{}
-
-
-	/*!
-	 *  \brief start BLEThread 
-	 *	
+	 *	\param addr : address of the device
+	 *	\param message : message tosend
  	 */
-	int start(void);
-	
+	int sendMessageToDevice(const ModuleType module, std::string message);
 
-	/*!
-	 *  \brief stop BLEThread  
-	 *	
- 	 */
-	void stop(void);
-
-
-	/*!
-	 *  \brief initialization of the bluetooth BLE 
-	 *	
-	 *	\return -1 : No dongle BLE detected
- 	 */
-	int init(void);
 
 	/*!
 	 *  \brief collect rear module and command address adress
@@ -106,20 +93,57 @@ public :
 	int getMessageFromDevice(const ModuleType module, std::string& frame);
 
 	/*!
-	 *  \brief send a message to a device 
-	 *
-	 *	\param addr : address of the device
-	 *	\param message : message tosend
- 	 */
-	int sendMessageToDevice(const ModuleType module, std::string message);
-
-	/*!
 	 *  \brief parse frame to process them 
 	 *
 	 *	\param frame
 	 *	\return -1 : frame is empty
  	 */
 	int parseCommandFrame(std::string frame);
+
+
+public :
+
+
+	/*!
+	 *  \brief BLEManager constructor 
+	 *
+ 	 */	
+	BLEManager();
+	~BLEManager();
+
+
+	/*!
+	 *  \brief start BLEThread 
+	 *	
+ 	 */
+	int start(void);
+	
+
+	/*!
+	 *  \brief stop BLEThread  
+	 *	
+ 	 */
+	void stop(void);
+
+
+	/*!
+	 *  \brief initialization of the bluetooth BLE 
+	 *	
+	 *	\return -1 : No dongle BLE detected
+ 	 */
+	int init(void);
+
+
+	/*!
+	 *  \brief fill BLEInfo with current state of connected device
+	 *	
+	 *	\return -1 : No dongle BLE detected
+ 	 */
+	void getBLEInfo(BLEInfo& bleInfo);
+
+
+
+
 
 };
 

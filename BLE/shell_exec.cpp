@@ -63,8 +63,8 @@ std::string ShellExec::execScan(){
     }
     pclose(pipe);
     
-    system("sudo hciconfig hci1 down");
-    system("sudo hciconfig hci1 up");
+    system("sudo hciconfig hci0 down");
+    system("sudo hciconfig hci0 up");
     return result;
 }
 	
@@ -75,12 +75,12 @@ std::string ShellExec::execGetBleNotification(std::string addr, int timeout_ms){
     int sec = timeout_ms/1000;
     int usec = (timeout_ms - sec*1000)*1000;
 
-    struct timeval timeout = {sec,usec}; //timeout of 10 secs.
+    struct timeval timeout = {sec,usec}; 
     int ret = -1;
 
     char buffer[128];
     std::string result = "";
-    std::string cmd = "sudo gatttool -t random -b " + addr + " --char-write-req --handle=0x000e --value=0100 --listen";
+    std::string cmd = "sudo gatttool -t random -b " + addr + " --char-write-req -a 0x000e -n 0100 --listen";
     FILE* pipe = popen(cmd.c_str(), "r");
     int fd = fileno(pipe);
 

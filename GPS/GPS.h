@@ -40,8 +40,9 @@ typedef struct {
 	float seaLevel;
 	float altitude;
 	float speed;
-	int hour;
-	int minut;
+	std::string hour;
+	std::string minut;
+	bool isValid;
 } GPSInfo;
 
 class GPS 
