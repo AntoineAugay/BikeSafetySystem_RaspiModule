@@ -22,7 +22,7 @@ private :
 	GPSInfo gpsInfo;
 	BLEInfo bleInfo;
 
-	int serializeAllData(GPSInfo& gpsInfo, BLEInfo& bleInfo, std::string& out);
+	void serializeAllData(GPSInfo& gpsInfo, BLEInfo& bleInfo, std::string& out);
 	std::string serialize(char header, float data);
 	std::string serialize(char header, std::string data);
 	std::string serialize(char header, bool data);	
