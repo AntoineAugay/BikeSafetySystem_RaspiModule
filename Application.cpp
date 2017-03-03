@@ -15,6 +15,7 @@ Application::Application(std::string uartName){
 	gpsInfo.latitude.cardinalPoint = 'A';
 	gpsInfo.latitude.value = "000.00";
 	gpsInfo.latitude.cardinalPoint = 'A';
+	gpsInfo.isValid = true;
 
 }
 
@@ -31,6 +32,7 @@ void Application::start(void){
 
 	timeval tvCurrentTime, tvLastSending;
 	long currentTime = 0, lastSending = 0;
+	std::string frameToSend = "";
 
 	ble->init();
 	gps->init();
@@ -46,21 +48,28 @@ void Application::start(void){
 		
 		if(currentTime - lastSending > 1000){
 
+			
 			ble->getBLEInfo(bleInfo);
+
+			/* Display data on console 
 			std::cout << "rearModuleFind : " << bleInfo.rearModuleFind << std::endl;
 			std::cout << "rearModuleWork : " << bleInfo.rearModuleWork << std::endl;
 			std::cout << "commandModuleFind : " << bleInfo.commandModuleFind << std::endl;
 			std::cout << "commandModuleWork : " << bleInfo.commandModuleWork << std::endl;
-
+			*/
 			
 			if(gps->getGPSInfo(gpsInfo) != -1){;			
+				/*
 				std::cout << "Heure : " << gpsInfo.hour << ":" << gpsInfo.minut << std::endl;
 				std::cout << "Speed : " << gpsInfo.speed << std::endl;
 				std::cout << "Altitude : " << gpsInfo.altitude << std::endl;
 				std::cout << "latitude : " << gpsInfo.latitude.value << "." << gpsInfo.latitude.cardinalPoint << std::endl;
 				std::cout << "longitude : " << gpsInfo.longitude.value << "." << gpsInfo.longitude.cardinalPoint << std::endl;
+				*/
 			}
 
+			serializeAllData(gpsInfo, bleInfo, frameToSend);
+			std::cout << frameToSend << std::endl;
 			
 			//std::cout << "Time between sending : " << currentTime - lastSending << std::endl;
 			gettimeofday(&tvLastSending, 0);
@@ -75,15 +84,13 @@ void Application::start(void){
 	gps->stop();
 }
 
-int Application::serializeAllData(GPSInfo& gpsInfo, BLEInfo& bleInfo, std::string& out){
+void Application::serializeAllData(GPSInfo& gpsInfo, BLEInfo& bleInfo, std::string& out){
 	/*
 		header :
 			- 0x01 : hour (2 octet)
 			- 0x02 : minut (2 octet)
 			- 0x03 : speed (N octet)
-			- 0x11 : rearModuleFind (1 octet)
 			- 0x12 : rearModuleWork (1 octet)
-			- 0x13 : commandModuleFind (1 octet)
 			- 0x14 : commandModuleWork (1 octet)
 	*/
 
@@ -95,9 +102,7 @@ int Application::serializeAllData(GPSInfo& gpsInfo, BLEInfo& bleInfo, std::strin
 		out += serialize((char)0x03, gpsInfo.speed);
 	}
 
-	out += serialize((char)0x11, bleInfo.rearModuleFind);
 	out += serialize((char)0x12, bleInfo.rearModuleWork);
-	out += serialize((char)0x13, bleInfo.commandModuleFind);
 	out += serialize((char)0x14, bleInfo.commandModuleWork);
 }
 
@@ -116,7 +121,6 @@ std::string Application::serialize(char header, float data){
 	out += (char)tmp.size();
 	out += tmp;
 
-	//std::cout << (int)out.at(0) << (int)out.at(1) << out.substr(2,out.size()-2) << std::endl;
 	return out;
 }
 

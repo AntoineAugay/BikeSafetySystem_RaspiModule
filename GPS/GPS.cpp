@@ -59,7 +59,7 @@ void GPS::task(void) {
 	std::string delimiter = "$";
 	std::size_t found1, foud2;
 
-	std::cout << "GPS thread running" << std::endl;
+	std::cerr << "GPS thread running" << std::endl;
 
 	while(threadRunning){
 
@@ -104,7 +104,7 @@ void GPS::parseFrameBuffer (std::string& gpsInfo) {
 		
 		std::string frame = gpsInfo.substr(0, foundEnd);
 		
-		//std::cout << "Extrated frame : " << frame << std::endl;
+		std::cerr << "Extrated frame : " << frame << std::endl;
 
 		std::string header = gpsInfo.substr(0, SIZE_HEADER_NMEA);
 
@@ -114,7 +114,7 @@ void GPS::parseFrameBuffer (std::string& gpsInfo) {
 		} else if (header == KEY_START_GPVTG_FRAME){
 			gpsFrames.GPVTG = frame;
 		} else {
-			//std::cout << " -> Invalid frame" << std::endl;
+			std::cerr << " -> Invalid frame" << std::endl;
 		}
 		gpsFrameLock.unlock();
 
@@ -137,13 +137,13 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 
 	gpsInfo.isValid = true;
 
-	std::cout << "GPGGA : " << GGAFrame << std::endl; 
-	std::cout << "GPVTG : " << VTGFrame << std::endl;
+	std::cerr << "GPGGA : " << GGAFrame << std::endl; 
+	std::cerr << "GPVTG : " << VTGFrame << std::endl;
 
 	// Get parameter of VTGFrame
 	strToVector(VTGFrame, result);
 
-	std::cout << "resultVTG size : " << result.size() << std::endl;
+	std::cerr << "resultVTG size : " << result.size() << std::endl;
 
 
 	if(	result[0].compare("$GPVTG") 
@@ -164,7 +164,7 @@ int GPS::getGPSInfo(GPSInfo& gpsInfo) {
 	// Get parameter of GGAFrame
 	strToVector(GGAFrame, result);
 
-	std::cout << "resultGGA size : " << result.size() << std::endl;
+	//std::cout << "resultGGA size : " << result.size() << std::endl;
 
 	if( result[0].compare("$GPGGA")
 		|| result[10].compare("M")

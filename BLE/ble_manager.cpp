@@ -46,7 +46,7 @@ void BLEManager::task(void){
 			if( currentTime - lastScan > 5000 ){
 
 				getModuleAddr();
-				std::cout << "REAR : " << rearModuleAddr << " / COMMAND : " << commandModuleAddr << std::endl;
+				//std::cout << "REAR : " << rearModuleAddr << " / COMMAND : " << commandModuleAddr << std::endl;
 				gettimeofday(&tvLastScan, 0);
 				lastScan = (tvLastScan.tv_sec*1000) + (tvLastScan.tv_usec/1000);
 			}
@@ -58,7 +58,7 @@ void BLEManager::task(void){
 			// Send message to rear module
 			message = MessagesToRear.pop();
 			if(message != "") {
-				std::cout << "Message sent : " << message << std::endl;
+				//std::cout << "Message sent : " << message << std::endl;
 				sendMessageToDevice(REAR, message);
 			}
 
@@ -69,7 +69,7 @@ void BLEManager::task(void){
 			std::string frame = "";
 			getMessageFromDevice(COMMAND, frame);
 			if(frame != ""){
-				std::cout << "Message received : " << frame << std::endl;
+				//std::cout << "Message received : " << frame << std::endl;
 				parseCommandFrame(frame);
 			}
 
@@ -77,7 +77,7 @@ void BLEManager::task(void){
 		}
 
 	}
-	usleep(100);
+	usleep(10000);
 }
 
 int BLEManager::init(void){
